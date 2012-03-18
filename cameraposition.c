@@ -39,8 +39,36 @@
 #include "openpilot.h"
 #include "cameraposition.h"
 
+static void CameraPositionTask(void *parameters);
+
 // Private variables
 static UAVObjHandle handle = NULL;
+float pos_x;
+float pos_y;
+
+void CameraPositionStart()
+{
+    CameraPositionInitialize();
+
+    // Start main task
+	xTaskCreate(CameraPositionTask, (signed char *)"Camera Position", STACK_SIZE_BYTES/4, NULL, TASK_PRIORITY, &handle);
+	TaskMonitorAdd(TASKINFO_RUNNING_CAMERAPOSITION, handle);
+
+	return 0;
+}
+
+static void CameraPositionTask(void *parameters)
+{
+    CameraPositionData data;
+}
+
+int32_t CameraInitialize()
+{
+	pos_x = 0.0;
+	pos_y = 0.0;
+
+	return 0;
+}
 
 /**
  * Initialize object.
@@ -68,6 +96,9 @@ int32_t CameraPositionInitialize(void)
 	}
 }
 
+
+
+MODULE_INITCALL(CameraInitialize, CameraPositionStart)
 /**
  * Initialize object fields and metadata with the default values.
  * If a default value is not specified the object fields
