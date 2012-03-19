@@ -38,6 +38,7 @@
 
 #include "openpilot.h"
 #include "cameraposition.h"
+#include "pios_servo.h"
 
 static void CameraPositionTask(void *parameters);
 
@@ -57,18 +58,41 @@ void CameraPositionStart()
 	return 0;
 }
 
-static void CameraPositionTask(void *parameters)
-{
-    CameraPositionData data;
-}
-
 int32_t CameraInitialize()
 {
 	pos_x = 0.0;
 	pos_y = 0.0;
 
+    /*These function calls are subject to change because
+      we don't know which pins the servos will be hooked up to */
+	PIOS_Servo_Set( 1, pos_x );
+	PIOS_Servo_Set( 2, pos_y );
+
 	return 0;
 }
+
+MODULE_INITCALL(CameraInitialize, CameraPositionStart)
+
+/*Gather position data from the UAVObject and move the servos accordingly*/
+static void CameraPositionTask(void *parameters)
+{
+    CameraPositionData data;
+
+    /* Coded at the moment to constantly update servo position but we 
+       may want to change this to listen for a callback from the GCS
+       before we update the servo positions or have some sort of time delay
+       because I don't know how fast UAVObjects can update. */
+    while(1)
+    {
+        CameraPositionGet( &data );
+        pos_x = data.x;
+        pos_y = data.y;
+
+        PIOS_Servo_Set( 1, pos_x );
+	    PIOS_Servo_Set( 2, pos_y );
+    }
+}
+
 
 /**
  * Initialize object.
@@ -97,8 +121,6 @@ int32_t CameraPositionInitialize(void)
 }
 
 
-
-MODULE_INITCALL(CameraInitialize, CameraPositionStart)
 /**
  * Initialize object fields and metadata with the default values.
  * If a default value is not specified the object fields
