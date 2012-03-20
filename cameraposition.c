@@ -88,6 +88,12 @@ static void CameraPositionTask(void *parameters)
         pos_x = data.x;
         pos_y = data.y;
 
+        /* pos_x and pos_y need to be configured to use this function
+           since it moves the servos based on a time value, not degree
+
+           Also, we'll probably need to take the difference in the new
+           positions (data.x, data.y) and compare them to the current/previous
+           position (pos_x, pos_y) */
         PIOS_Servo_Set( 1, pos_x );
 	    PIOS_Servo_Set( 2, pos_y );
     }
