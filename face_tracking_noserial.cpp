@@ -158,6 +158,8 @@ void detectAndDisplay( IplImage *img, int menucode)
 					sendx=lastx;
 					sendy=lasty;
 				}
+				
+				//Here is where the servo degree position would be sent to the arduino
 				//arduino->Write("s" + ( servocenter + (sendx) ) +"b"+ ( servocenter + (sendy*2) ) +"e" );
 
 				lastx=sendx;
