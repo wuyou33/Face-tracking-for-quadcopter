@@ -1,27 +1,28 @@
-// arduinoComm.cpp : main project file.
+// face_tracking_noserial.cpp : main project file.
 
-#include "stdafx.h"
-#include "cv.h"
-#include "highgui.h"
+//#include "stdafx.h"
+#include <cv.h>
+#include <highgui.h>
 
 #include <iostream>
 #include <stdio.h>
 
+
 using namespace std;
 using namespace cv;
 
-int menu();
+
+void menu();
 
 /** Function Headers */
-void detectAndDisplay( IplImage *img);
-void detectAndDisplayEyes();
+void detectAndDisplay( IplImage *img,int menucode);
+
 
 /** Global variables */
-//cv::String face_cascade_name = "haarcascade_frontalface_alt.xml";
-//String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
+int startx=0;
+int starty=0;
 CascadeClassifier face_cascade;
 CvHaarClassifierCascade *facecascade;
-CvHaarClassifierCascade *eyecascade;
 CvMemStorage            *storage;
 //CascadeClassifier eyes_cascade;
 string window_name = "Capture - Face detection";
@@ -30,20 +31,30 @@ int resX=320;
 int resY=240;
 
 
+bool connection=false;
+
+int counter=0;
+int flagUp = 0;
+int flagDown = 0;
+int storex[2] = {0,0};
+int storey[2] = {0,0};
+int lastx=0;
+int lasty=0;
+
+
 int main( int argc, char** argv )
 {
-	//TODO - menu will return a value corresponding to a mode to enter.
-	int menucode;
-	menucode=menu();
+	int menucode=1;
+	menu();
+	//if(menucode==3)
+		//return 0;
 
 	//-- 1. Load the cascades
 	//if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -2; };
 	storage = cvCreateMemStorage( 0 );
 	char      *filenameFace = "haarcascade_frontalface_alt.xml";
-	char      *filenameEyes = "haarcascade_eye_tree_eyeglasses.xml";
 	facecascade = ( CvHaarClassifierCascade* )cvLoad( filenameFace, 0, 0, 0 );
-	eyecascade = ( CvHaarClassifierCascade* )cvLoad( filenameEyes, 0, 0, 0 );
-
+	
 	//-- 2. Read the video stream
 	CvCapture* capture;
 	capture = cvCaptureFromCAM( -1 );
@@ -67,7 +78,7 @@ int main( int argc, char** argv )
 			if( frame )
 			{ 
 				// detect faces and display video and send coordinates to arduino
-				detectAndDisplay( frame);
+				detectAndDisplay( frame, menucode);
 				
 			}
 			else
@@ -77,14 +88,13 @@ int main( int argc, char** argv )
 			if( (char)c == 'c' ) { break; }
 		}
 	}
-	
 	return 0;
 }
 
 /** @function detectAndDisplay */
-void detectAndDisplay( IplImage *img)
+void detectAndDisplay( IplImage *img, int menucode)
 {
-    int i,centerx,centery;
+    int i,centerx=0,centery=0;
  
     // detect faces 
     CvSeq *faces = cvHaarDetectObjects(
@@ -98,86 +108,75 @@ void detectAndDisplay( IplImage *img)
 	CvRect *face;
     // for each face found, draw a red box 
 
-    //for( i = 0 ; i < ( faces ? faces->total : 0 ) ; i++ ) {
-        //r = ( CvRect* )cvGetSeqElem( faces, i );
-        face=( CvRect* )cvGetSeqElem( faces, 0 );
+    for( i = 0 ; i < ( faces ? faces->total : 0 ) ; i++ ) {
+        face=( CvRect* )cvGetSeqElem( faces, i );
 		Point center( face->x + face->width*0.5, face->y + face->height*0.5 );
 		cvEllipse( img, center, Size( face->width*0.5, face->height*0.5), 0, 0, 360, Scalar( 255, 0, 255 ), 4, 8, 0 );
 		centerx = face->x + face->width*0.5;
 		centery = face->y + face->height*0.5;
-
-		//displays rectangle for face tracking instead of ellipse
-        /*cvRectangle( img,
-                     cvPoint( r->x, r->y ),
-                     cvPoint( r->x + r->width, r->y + r->height ),
-                     CV_RGB( 255, 0, 0 ), 1, 8, 0 );*/
+		
         /* reset buffer for the next object detection */
     	cvClearMemStorage(storage);
-    //}
- 	/* Set the Region of Interest: estimate the eyes' position */
-    cvSetImageROI(
-        img,                    /* the source image */
-        cvRect(
-            face->x,            /* x = start from leftmost */
-            face->y + (face->height/5.5), /* y = a few pixels from the top */
-            face->width,        /* width = same width with the face */
-            face->height/3.0    /* height = 1/3 of face height */
-        )
-    );
-    
-    //find eyes and draw squares
-    detectAndDisplayEyes(img);
+    }
+
+	if(faces && centerx!=0 && centery!=0) {
+		if(startx==0 || starty==0) {
+			startx=centerx;
+			starty=centery;
+			lastx = startx;
+			lasty = starty;
+			
+		}
+		int servocenter=90;
+		int diffx = startx - centerx;
+		int diffy = starty - centery;
+		int sendy=diffy;
+		int sendx=diffx;
+		if(storex[0]!=0 && storey[0]!=0 && storey[1]!=0 && storex[1]!=0)
+		{
+			sendy=(storey[0]+storey[1]+diffy)/3;
+			sendx=(storex[0]+storex[1]+diffx)/3;
+			/*if((storey[0]>diffy && storey[0] > storey[1]) || (storey[0] < diffy && storey[0] < storey[1])) 
+			{
+				storey[0]=storey[1];
+			}
+			if((storex[0]>diffx && storex[0] > storex[1]) || (storex[0] < diffx && storex[0] < storex[1])) 
+			{
+				storey[0]=storey[1];
+			}*/
+		}
+		
+		int fudgex=0;
+		int fudgey=0;
+		if(connection && storey[0]!=0 && counter==1 )//&& (fudgey > 2 || fudgey < -2) )
+		{	
+				fudgex = lastx - sendx;
+				fudgey = lasty - sendy;
+				
+			
+				if(fudgey<2 && fudgey>-2) {
+					sendx=lastx;
+					sendy=lasty;
+				}
+				//arduino->Write("s" + ( servocenter + (sendx) ) +"b"+ ( servocenter + (sendy*2) ) +"e" );
+
+				lastx=sendx;
+				lasty=sendy;
+		}
+		if(counter<1)
+			counter++;
+		else
+			counter=0;
+		storex[1]=storex[0];storex[0]=diffx;
+		storey[1]=storey[0];storey[0]=diffy;
+	}
     
     // display video 
     cvShowImage( "video", img );
 }
 
-/** @function detectAndDisplay */
-void detectAndDisplayEyes( IplImage *img)
-{
-	/* detect the eyes */
-    CvSeq *eyes = cvHaarDetectObjects(
-        img,            /* the source image, with the
-                           estimated location defined */
-        eyecascade,      /* the eye classifier */
-        storage,        /* memory buffer */
-        1.15, 3, 0,     /* tune for your app */
-        cvSize(25, 15)  /* minimum detection scale */
-    );
- 	int i;
-    
-    /* draw a rectangle for each detected eye */
-    for( i = 0; i < (eyes ? eyes->total : 0); i++ ) {
-        /* get one eye */
-        CvRect *eye = (CvRect*)cvGetSeqElem(eyes, i);
-       
-        /* draw a red rectangle */
-        cvRectangle(
-            img,
-            cvPoint(eye->x, eye->y),
-            cvPoint(eye->x + eye->width, eye->y + eye->height),
-            CV_RGB(255, 0, 0),
-            1, 8, 0
-        );
-    }
-    int dist=0;
-    if(eyes) {
-    	if(eyes->total>=2) {
-    		CvRect *eye1 = (CvRect*)cvGetSeqElem(eyes, 0);
-    		CvRect *eye2 = (CvRect*)cvGetSeqElem(eyes, 1);
-    		dist=(eye2->x+eye2->width*0.5)-(eye1->x+eye1->width*0.5);
-    	}
-    }
-    if(dist<0)
-    	dist=-dist;
-    printf("Distance between eyes: %i pixels\n",dist);
-    /* reset region of interest */
-    cvResetImageROI(img);
-}
-
-
 //TODO - return a value corresponding to the mode the user selected
-int menu()
+void menu()
 {
 	//determine resolution to display webcam video at
 	std::cout << "Please select a video resolution:\n1. 160x120\n2. 320x240\n3. 480x360\n4. 640x480" << std::endl;
@@ -201,6 +200,7 @@ int menu()
 			resY=480;
 			break;
 	}
+	/*
 	std::cout << "Select a face tracking control mode" << std::endl;
 	std::cout << "1. Continuous(camera moves with head always)" << std::endl;
 	std::cout << "2. Directional(camera stays in last position if head returned to center)" << std::endl;
@@ -209,5 +209,6 @@ int menu()
 	std::cin >> mode;
 
 	//std::cout << mode << endl;
-	return mode;
+	return mode;*/
 }
+
