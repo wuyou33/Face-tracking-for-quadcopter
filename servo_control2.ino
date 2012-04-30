@@ -1,6 +1,6 @@
-
 #include <Servo.h>
 
+//initialize global variables
 Servo pan;
 Servo tilt;
 Servo roll;
@@ -30,12 +30,16 @@ void setup()
   Serial.begin(57600);
 }
 
+//main program loop
 void loop()
 {
   int i = 0;
 
+
+  //read from serial input
   if( Serial.available() > 0 )
   {
+    //parse input based on communication protocol of "s'xpos'b'ypos'e"
     if(done_flag==1) 
     {
       tempx=0;
@@ -43,7 +47,6 @@ void loop()
       done_flag=0;
     }
     inByte = Serial.read();
-    //Serial.println(inByte);
     if(inByte=='s') {
       init_flag=0;
       done_flag=0;
@@ -55,8 +58,6 @@ void loop()
       if(inByte!='e') 
       {
         controlmode=inByte-'0';
-        //Serial.print("control mode:");
-        //Serial.println(controlmode);
       }
       else {
         init_flag=0;
@@ -66,12 +67,6 @@ void loop()
       newx=-1;
       newy=-1;
       init_flag=1;
-      /*inByte=Serial.read();
-      Serial.println(inByte);
-      controlmode=inByte-'0';
-      while(Serial.read()!='e') {}
-      Serial.print("control mode:");
-      Serial.println(controlmode);*/
     }
     else if( inByte != 'b' && inByte != 'e' && inByte!='s')
     {
@@ -117,7 +112,6 @@ void loop()
       }
     } 
   }
-  //servocontrol(newx,newy);
   if(newx!=-1 && newy!=-1) 
   {
     if(controlmode==1)
@@ -125,23 +119,17 @@ void loop()
     else if(controlmode==2)
       modetwo(newx,newy);
   }
-//  pan.write(panx);
-  //tilt.write(tilty);
 }
 
+//for direct control
 void modeone(long x, long y) {
-  //int distance=sqrt(((x-xpos)*(x-xpos))+((y-ypos)*(y-ypos)));
+
   int longest;
   int del=0;
   int xdif=(x-xpos);
   int ydif=(y-ypos);
-  /*if(xdif<0)
-    xdif=(xdif*-1);*/
   if(ydif<0)
     ydif=(ydif*-1);
-  /*if(xdif>ydif)
-    longest=xdif;
-  else*/
     longest=ydif;
   if(longest<13)
     del=230/(longest);
@@ -154,27 +142,17 @@ void modeone(long x, long y) {
     else
       xdif=(xdif/10)-1;
     xdif=xdif*10;
+
+    //If x is not inbetween 75 and 105 then add it to 1560 (center point of servo) otherwise set it to the center point
     if(x<75 || x>105)
       pan.writeMicroseconds(1560+xdif);
     else
       pan.writeMicroseconds(1560);
  
-  //while(xpos!=x || ypos != y) {
 
     while(ypos!=y) 
     {
       
-      //continuouscontrol(x);
-      //control x
-      /*if(x<70 || x>110) {
-        
-      } 
-      if(ypos>180)
-        ypos=180;
-      if(ypos<0)
-        ypos=0;*/
-   // if(ypos<=180 && ypos>=0)
-      // pan.writeMicroseconds(ypos);
       
       if(ypos!=y) {
         if(ypos<y)
@@ -192,6 +170,8 @@ void modeone(long x, long y) {
 
    
 }
+
+//for joystick like control
 void modetwo(long x,long y) 
 {
  //continuouscontrol(x);
