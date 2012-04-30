@@ -15,6 +15,7 @@ using namespace System;
 using namespace System::IO::Ports;
 
 int menu();
+/** function for connecting to microcontroller over serial port **/
 void connect(SerialPort^ &arduino);
 
 /** Function Headers */
@@ -214,7 +215,7 @@ void detectAndDisplay( IplImage *img, SerialPort^ &arduino, int menucode)
  	/* Set the Region of Interest: estimate the eyes' position */
 
 
-	/*if(face) {
+	if(face) {
 		cvSetImageROI(
 		    img,                    // the source image 
 		    cvRect(
@@ -225,8 +226,8 @@ void detectAndDisplay( IplImage *img, SerialPort^ &arduino, int menucode)
 		    )
 		);
 		//find eyes and draw squares
-		detectAndDisplayEyes(img);
-	}*/
+		//detectAndDisplayEyes(img);
+	}
     
 
 
@@ -265,14 +266,7 @@ void detectAndDisplayEyes( IplImage *img, CvRect *face)
 			Point centereye( eye->x + eye->width*0.5, eye->y + eye->height*0.5 );
 			int radius = cvRound( (eye->width + eye->height)*0.25 );
 			cvCircle( img, centereye, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
-			/*if(distance==0) 
-			{
-				distance=(eye->x+eye->width*0.5);
-			}
-			else {
-				distance=distance-(eye->x+eye->width*0.5);
-				printf("distance:%i\n",distance);
-			}*/
+			
 		}
 
 
@@ -310,14 +304,7 @@ void detectAndDisplayNose( IplImage *img, CvRect *face)
 			Point centernose( nose->x + nose->width*0.5, nose->y + nose->height*0.5 );
 			int radius = cvRound( (nose->width + nose->height)*0.25 );
 			cvCircle( img, centernose, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
-			/*if(distance==0) 
-			{
-				distance=(eye->x+eye->width*0.5);
-			}
-			else {
-				distance=distance-(eye->x+eye->width*0.5);
-				printf("distance:%i\n",distance);
-			}*/
+			
 		}
 
     
@@ -330,7 +317,7 @@ void detectAndDisplayNose( IplImage *img, CvRect *face)
 int menu()
 {
 	//determine resolution to display webcam video at
-	/*std::cout << "Please select a video resolution:\n1. 160x120\n2. 320x240\n3. 480x360\n4. 640x480" << std::endl;
+	std::cout << "Please select a video resolution:\n1. 160x120\n2. 320x240\n3. 480x360\n4. 640x480" << std::endl;
 	int res;
 	std::cin >> res;
 	switch(res) {
@@ -350,9 +337,7 @@ int menu()
 			resX=640;
 			resY=480;
 			break;
-	}*/
-	resX=480;
-	resY=360;
+	}
 	std::cout << "Select a face tracking control mode" << std::endl;
 	std::cout << "1. Continuous(camera moves with head always)" << std::endl;
 	std::cout << "2. Directional(camera stays in last position if head returned to center)" << std::endl;
